@@ -1,0 +1,7 @@
+.idea/*
+node_modules/*
+dist/*
+.grunt/*
+index.html
+angularjs.html
+npm-debug.log
