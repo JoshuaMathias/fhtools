@@ -1,6 +1,6 @@
 {
   "name": "fhtools",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "Family History Tools App using the FamilySearch API",
   "main": "index.js",
   "repository": {
