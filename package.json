@@ -20,7 +20,7 @@
     "url": "https://github.com/JoshuaMathias/fhtools/issues"
   },
   "dependencies": {
-    "familysearch": "http://registry.npmjs.org/familysearch/-/familysearch-1.0.0.tgz",
+    "fsAPI": "http://registry.npmjs.org/familysearch/-/familysearch-1.0.0.tgz",
     "superagent": "~0.14.9",
     "debug": "~0.7.2"
   },
