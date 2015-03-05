@@ -1,0 +1,30 @@
+{
+  "name": "fhtools",
+  "version": "0.0.0",
+  "description": "Family History Tools App using the FamilySearch API",
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/JoshuaMathias/fhtools"
+  },
+  "homepage":"http://www.familyhistorytools.net",
+  "keywords": [
+    "familysearch",
+    "api",
+    "Family History Tools",
+    "fhtools",
+    "family history"
+  ],
+  "author": "Joshua Mathias <joshuamathias@familyhistorytools.net>",
+  "bugs": {
+    "url": "https://github.com/JoshuaMathias/fhtools/issues"
+  },
+  "dependencies": {
+    "familysearch": "http://registry.npmjs.org/familysearch/-/familysearch-1.0.0.tgz",
+    "superagent": "~0.14.9",
+    "debug": "~0.7.2"
+  },
+  "engines": {
+    "node": "*"
+  }
+}
