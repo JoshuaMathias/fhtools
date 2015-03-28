@@ -1,168 +1,129 @@
-#! node
-//  FamilyHistoryTools Node application
-var express = require('express');
-var fs      = require('fs');
-var FamilySearch = require('familysearch-javascript-sdk');
+var fs = require('fs');
+var http = require('http');
+var https = require('https');
+var url = require('url');
+var debug = require('debug');
+var assert = require('assert');
+var express = require('express'), jade = require('jade'),
+    ejs = require('ejs'), bodyParser = require('body-parser');
+var mongoose = require('mongoose');
+mongoose.connect('mongodb://fhuser:d0famhis7@localhost/fhtoolsdb?authSource=admin');
+var app = express();
 var fhtools = require('fhtools');
-
+app.use(bodyParser.urlencoded({ extended: false }));
 var ROOT_DIR = "/home/ec2-user/public_html";
 
 var options = {
-  key: fs.readFileSync('ssl/key.pem'),
-  cert: fs.readFileSync('ssl/cert.pem')
-};
+    hostname: 'localhost',
+    host: '127.0.0.1',
+    key: fs.readFileSync('ssl/server.key'),
+    cert: fs.readFileSync('ssl/server.crt')
+  };
 
-/**
- *  Define the family history tools app.
- */
-var FHTools = function() {
+http.createServer(app).listen(80);
+https.createServer(options, app).listen(443);
+app.get('/',function(req, res) {
+  res.sendFile(ROOT_DIR+"/index.html");
+});
+app.use('/', express.static(ROOT_DIR, {maxAge: 60*60*1000}));
 
-    //  Scope.
-    var self = this;
-
-
-    /*  ================================================================  */
-    /*  Helper functions.                                                 */
-    /*  ================================================================  */
-
-    /**
-     *  Set up server IP address and port # using env variables/defaults.
-     */
-    self.setupVariables = function() {
-        //  Set the environment variables we need.
-        self.ipaddress = "127.0.0.1";
-        self.port      = 80;
-
-        if (typeof self.ipaddress === "undefined") {
-            //  Log errors on OpenShift but continue w/ 127.0.0.1 - this
-            //  allows us to run/test the app locally.
-            console.warn('No ip var, using 127.0.0.1');
-            self.ipaddress = "127.0.0.1";
-        };
-    };
-
-
-    /**
-     *  Populate the cache.
-     */
-    self.populateCache = function() {
-        if (typeof self.zcache === "undefined") {
-            self.zcache = { '/home/ec2-user/public_html/index.html': '' };
-        }
-
-        //  Local cache for static content.
-        self.zcache['/home/ec2-user/public_html/index.html'] = fs.readFileSync('/home/ec2-user/public_html/index.html');
-    };
-
-
-    /**
-     *  Retrieve entry (content) from cache.
-     *  @param {string} key  Key identifying content to retrieve from cache.
-     */
-    self.cache_get = function(key) { return self.zcache[key]; };
-
-
-    /**
-     *  terminator === the termination handler
-     *  Terminate server on receipt of the specified signal.
-     *  @param {string} sig  Signal to terminate on.
-     */
-    self.terminator = function(sig){
-        if (typeof sig === "string") {
-           console.log('%s: Received %s - terminating FHTools app ...',
-                       Date(Date.now()), sig);
-           process.exit(1);
-        }
-        console.log('%s: Node server stopped.', Date(Date.now()) );
-    };
-
-
-    /**
-     *  Setup termination handlers (for exit and a list of signals).
-     */
-    self.setupTerminationHandlers = function(){
-        //  Process on exit and signals.
-        process.on('exit', function() { self.terminator(); });
-
-        // Removed 'SIGPIPE' from the list - bugz 852598.
-        ['SIGHUP', 'SIGINT', 'SIGQUIT', 'SIGILL', 'SIGTRAP', 'SIGABRT',
-         'SIGBUS', 'SIGFPE', 'SIGUSR1', 'SIGSEGV', 'SIGUSR2', 'SIGTERM'
-        ].forEach(function(element, index, array) {
-            process.on(element, function() { self.terminator(element); });
+app.post('/getdata', function (req, res) {
+      FS = fhtools.init(req.body.access_token);
+         res.writeHead(200, {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*"
         });
-    };
-
-
-    /*  ================================================================  */
-    /*  App server functions (main app logic here).                       */
-    /*  ================================================================  */
-
-    /**
-     *  Create the routing table entries + handlers for the application.
-     */
-    self.createRoutes = function() {
-        self.routes = { };
-
-        self.routes['/asciimo'] = function(req, res) {
-            var link = "http://i.imgur.com/kmbjB.png";
-            res.send("<html><body><img src='" + link + "'></body></html>");
-        };
-
-        self.routes['/'] = function(req, res) {
-            console.log("Get index");
-            res.setHeader('Content-Type', 'text/html');
-            res.send(self.cache_get('index.html') );
-        };
-    };
-
-
-    /**
-     *  Initialize the server (express) and create the routes and register
-     *  the handlers.
-     */
-    self.initializeServer = function() {
-        self.createRoutes();
-        self.app = express();
-
-        //  Add handlers for the app (from the routes).
-        for (var r in self.routes) {
-            self.app.get(r, self.routes[r]);
-        }
-    };
-
-
-    /**
-     *  Initializes the application.
-     */
-    self.initialize = function() {
-        self.setupVariables();
-        self.populateCache();
-        self.setupTerminationHandlers();
-
-        // Create the express server and routes.
-        self.initializeServer();
-    };
-
-
-    /**
-     *  Start the server (starts up the application).
-     */
-    self.start = function() {
-        //  Start the app on the specific interface (and port).
-        self.app.listen(self.port, self.ipaddress, function() {
-            console.log('%s: Node server started on %s:%d ...',
-                        Date(Date.now() ), self.ipaddress, self.port);
+         FS.getCurrentUser().then(function(userResponse) {
+          res.end(JSON.stringify(userResponse.getUser().contactName));
+         }, function(error){
+            res.writeHead(500);
+            res.write(JSON.stringify(error));
+            res.end();
         });
-    };
+      });
 
-}; 
+app.get('/getcity', function (req, res) {
+  var urlObj = url.parse(req.url, true, false);
+    var myRe = new RegExp("^"+urlObj.query["q"]);
+   fs.readFile('cities.dat.txt', function (err, data) {
+    if(err) throw err;
+    cities = data.toString().split("\n");
+    
+    var citiesFiltered=[];
+    for(var i = 0; i < cities.length; i++) {
+      var result = cities[i].search(myRe);
+      if(result != -1) {
+        citiesFiltered.push({city:cities[i]});
+      }
+    }
+    res.writeHead(200, {
+    "Content-Type": "application/json",
+    "Access-Control-Allow-Origin": "*"
+    });
 
+    res.end(JSON.stringify(citiesFiltered));
+    });
+});
 
-
-/**
- *  main():  Main code.
- */
-var zapp = new FHTools();
-zapp.initialize();
-zapp.start();
-
+app.get('/comment', function (req, res) {
+    console.log("In comment route");
+    var MongoClient = require('mongodb').MongoClient;
+          var Db = require('mongodb').Db;
+          var Server = require('mongodb').Server;
+          MongoClient.connect("mongodb://localhost", function(err, db) {
+            if(err) { console.log("Failed connection"); throw err; }
+            db.authenticate("dbuser","1hav3p0wer",function(err, authRes) {
+              if(err) { console.log("Failed authentication"); throw err; }
+                var weatherDb = db.db("weather");
+                  assert(!null,weatherDb);
+                  weatherDb.collection('comments').find(function(err, items) {
+                  if(err) { console.log("Failed read"); throw err; }
+                  items.toArray(function(err, itemArr){
+                  console.log("Document Array: ");
+                  console.log(itemArr);
+                  res.writeHead(200, {
+    "Content-Type": "application/json",
+    "Access-Control-Allow-Origin": "*"
+    });
+                  res.end(JSON.stringify(itemArr));
+                  });
+                });
+              });
+          });
+  });
+  app.post('/comment', function (req, res) {
+    console.log("In POST comment route");
+    console.log(req.body);
+           var jsonData = "";
+      req.on('data', function (chunk) {
+        jsonData += chunk;
+      });
+      req.on('end', function () {
+        var reqObj = JSON.parse(jsonData);
+        console.log(reqObj);
+         // Now put it into the database
+          var MongoClient = require('mongodb').MongoClient;
+          var Db = require('mongodb').Db;
+          var Server = require('mongodb').Server;
+          console.log("Before connecting");
+          MongoClient.connect("mongodb://localhost", function(err, db) {
+            if(err) { console.log("Failed connection"); throw err; }
+            console.log("connected");
+            db.authenticate("dbuser","1hav3p0wer",function(err, authRes) {
+              if(err) { console.log("Failed authentication"); throw err; }
+              console.log("authenticated");
+                var weatherDb = db.db("weather");
+                  assert(!null,weatherDb);
+                  weatherDb.collection('comments').insert(reqObj,function(err, records) {
+                  if(err) { console.log("Failed insert"); throw err; }
+                  console.log("Record added as "+records[0]._id);
+                });
+              });
+          });
+         res.writeHead(200, {
+    "Content-Type": "application/json",
+    "Access-Control-Allow-Origin": "*"
+    });
+        res.end("");
+      });
+  });
