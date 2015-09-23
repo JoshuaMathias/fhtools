@@ -32,7 +32,7 @@ window.run = function() {
   };
 
 var client = new FamilySearch({
-  client_id: 'a0T3000000BQeanEAD',
+  client_id: 'this_is_where_your_client_id_goes',
   auth_callback: 'http://52.11.53.79',
   redirect_uri: 'http://52.11.53.79',
   environment: 'sandbox',
